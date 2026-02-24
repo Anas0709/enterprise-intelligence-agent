@@ -2,6 +2,10 @@
 
 A backend-driven AI chatbot that connects to enterprise data, executes analytical SQL queries, runs ML predictions, and returns structured business insights. Built with FastAPI, OpenAI tool-calling, and a modular, pluggable architecture.
 
+## Project Intent
+
+This project showcases a real-world AI/ML integration where an LLM performs decision support over enterprise data and predictive models. It highlights handling SQL, ML pipelines, API design, and modular code structure—skills directly applicable to production AI systems.
+
 ## Project Overview
 
 The Enterprise Intelligence Agent simulates an enterprise-grade AI system that:
@@ -71,7 +75,7 @@ cp .env.example .env
 python train_model.py
 ```
 
-This creates `models/model.pkl` from `data/sample_data.csv` and prints test accuracy.
+This creates `models/model.pkl` from `data/sample_data.csv` and prints test accuracy and AUC.
 
 ### 4. Run the API
 
@@ -127,17 +131,44 @@ curl -X POST http://localhost:8000/chat \
 
 ## Response Format
 
+Example response for *"What is total revenue by region?"*:
+
 ```json
 {
-  "response": "Based on the data, total revenue by region is...",
+  "response": "Based on the data, total revenue by region: North ($6,647.75), South ($6,530.25), East ($11,412.00), West ($7,961.25). North and East together account for the highest combined revenue.",
   "tool_calls": ["run_sql_query"],
   "metadata": {
-    "insight_summary": "Revenue breakdown by region...",
+    "insight_summary": "Revenue higher in North/East; West and South show room for growth.",
     "confidence_level": "high",
     "data_sources_used": ["sql"]
   }
 }
 ```
+
+Example response for *"Predict churn risk for customer 10"*:
+
+```json
+{
+  "response": "Customer 10 has a churn probability of 0.23 (23%), which falls in the low-risk category. This customer appears stable based on their spend and region profile.",
+  "tool_calls": ["predict_churn"],
+  "metadata": {
+    "insight_summary": "Low churn risk; no immediate retention action needed.",
+    "confidence_level": "high",
+    "data_sources_used": ["ml_model"]
+  }
+}
+```
+
+## Model Metrics
+
+The churn prediction model is evaluated on a held-out 20% test set (sample dataset, 25 rows):
+
+| Metric        | Value   |
+|---------------|---------|
+| Test Accuracy | 80.00%  |
+| Test AUC-ROC  | 1.00    |
+
+Features: `age`, `total_spend`, `region` (one-hot encoded). Risk levels: low (&lt;30% prob), medium (30–60%), high (&gt;60%).
 
 ## Database Schema (Default)
 
