@@ -82,3 +82,14 @@ class TestRunSqlQuery:
         assert "results" in result
         assert len(result["results"]) == 1
         assert "cnt" in result["results"][0]
+
+    def test_parameterized_query_works(self, db_with_data):
+        """Parameterized queries prevent SQL injection."""
+        result = run_sql_query(
+            "SELECT customer_id, age FROM customers WHERE customer_id = :cid LIMIT 1",
+            params={"cid": 1},
+        )
+        assert "error" not in result
+        assert "results" in result
+        if result["results"]:
+            assert result["results"][0]["customer_id"] == 1

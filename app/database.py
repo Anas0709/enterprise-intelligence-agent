@@ -54,9 +54,10 @@ def validate_sql_query(query: str) -> tuple[bool, str]:
     return True, ""
 
 
-def run_sql_query(query: str) -> dict[str, Any]:
+def run_sql_query(query: str, params: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     """
     Execute a read-only SQL query and return JSON results.
+    Supports parameterized queries via params dict for safe user input.
     """
     is_valid, err = validate_sql_query(query)
     if not is_valid:
@@ -66,7 +67,8 @@ def run_sql_query(query: str) -> dict[str, Any]:
     try:
         engine = get_engine()
         with engine.connect() as conn:
-            result = conn.execute(text(query))
+            stmt = text(query)
+            result = conn.execute(stmt, params or {})
             rows = result.fetchall()
             columns = list(result.keys())
 

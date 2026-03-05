@@ -37,7 +37,8 @@ def _load_model():
 def _get_customer_features(customer_id: int) -> Optional[dict]:
     """Extract features for a customer from the database."""
     result = run_sql_query(
-        f"SELECT age, region, total_spend, churn FROM customers WHERE customer_id = {customer_id}"
+        "SELECT age, region, total_spend, churn FROM customers WHERE customer_id = :customer_id",
+        params={"customer_id": customer_id},
     )
     if result.get("error") or not result.get("results"):
         return None
