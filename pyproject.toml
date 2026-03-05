@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "enterprise-intelligence-agent"
+version = "0.1.0"
+description = "AI chatbot connecting enterprise data, SQL analytics, and ML churn prediction"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Anas Ahmad", email = "anasahmad0709@gmail.com" }
+]
+keywords = ["ai", "llm", "fastapi", "ml", "sql", "enterprise", "churn-prediction"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Repository = "https://github.com/Anas0709/enterprise-intelligence-agent"
+Homepage = "https://github.com/Anas0709/enterprise-intelligence-agent"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
