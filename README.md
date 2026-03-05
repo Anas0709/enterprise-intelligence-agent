@@ -1,5 +1,7 @@
 # Enterprise Intelligence Agent
 
+[![CI](https://github.com/Anas0709/enterprise-intelligence-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Anas0709/enterprise-intelligence-agent/actions/workflows/ci.yml)
+
 A backend-driven AI chatbot that connects to enterprise data, executes analytical SQL queries, runs ML predictions, and returns structured business insights. Built with FastAPI, OpenAI tool-calling, and a modular, pluggable architecture.
 
 ## Project Intent
@@ -57,7 +59,7 @@ The system is extensible and open-source: plug in your own LLM API key, connect 
 ### 1. Clone and Install
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/Anas0709/enterprise-intelligence-agent.git
 cd enterprise-intelligence-agent
 pip install -r requirements.txt
 ```
@@ -213,10 +215,14 @@ docker-compose up --build
 
 ## Limitations & Future Improvements
 
-- **SQL**: Read-only; no parameterized queries in tool (relies on LLM to build safe queries).
+- **SQL**: Read-only; LLM-generated queries are validated before execution. Internal customer lookups use parameterized queries for safety.
 - **ML**: Single model (churn); feature encoding is coupled to training script.
 - **LLM**: OpenAI only (extensible but not abstracted).
-- **Future**: Embeddings + vector search, logging middleware, Streamlit UI, unit tests for SQL tool.
+- **Future**: Embeddings + vector search, Streamlit UI, LLM provider abstraction.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and pull request guidelines.
 
 ## License
 
