@@ -38,12 +38,14 @@ def _build_metadata(
     tool_calls: list[str],
     data_sources: Optional[set] = None,
 ) -> dict[str, Any]:
-    """Build structured metadata from tool usage."""
+    """Derive data_sources_used and confidence_level from which tools were invoked."""
     sources = data_sources or set()
     if "run_sql_query" in tool_calls:
         sources.add("sql")
     if "predict_churn" in tool_calls:
         sources.add("ml_model")
+    if "get_business_summary" in tool_calls:
+        sources.add("business_summary")
 
     confidence = "high" if sources else "medium"
     return {
@@ -62,9 +64,13 @@ def _call_llm_with_tools(message: str) -> dict[str, Any]:
             "role": "system",
             "content": (
                 "You are an Enterprise Intelligence Agent. You help users analyze business data "
-                "using SQL queries and ML predictions. When asked about revenue, regions, customers, "
-                "or analytics, use run_sql_query. When asked about churn risk for a specific customer, "
-                "use predict_churn. Always summarize results clearly and provide actionable insights. "
+                "using SQL queries and ML predictions. "
+                "For business overviews, executive summaries, 'summarize business risks', or high-level "
+                "questions about overall KPIs (customer count, total revenue, churn rate, revenue by region), "
+                "use get_business_summary first. "
+                "For ad-hoc analytical queries (revenue by region, customer stats, etc.), use run_sql_query. "
+                "For churn risk of a specific customer, use predict_churn. "
+                "Always summarize results clearly and provide actionable insights. "
                 "Include structured metadata: insight_summary, confidence_level, data_sources_used."
             ),
         },

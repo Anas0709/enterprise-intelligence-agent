@@ -87,6 +87,16 @@ uvicorn app.main:app --reload --port 8000
 
 The API starts at `http://localhost:8000`. Sample data is auto-loaded into SQLite on startup.
 
+## API Behavior
+
+### Request Correlation (X-Request-ID)
+
+All responses include an `X-Request-ID` header for distributed tracing. Clients may send `X-Request-ID` in the request; if present, it is echoed back. Otherwise, the server generates a UUID. Use this ID to correlate logs across services and requests.
+
+### Message Length Limit
+
+Chat messages are limited to 4,096 characters. Overlong messages are rejected with HTTP 422. This limit aligns with typical LLM context windows and prevents abuse.
+
 ## Example curl Requests
 
 ### Health Check
@@ -119,6 +129,16 @@ curl -X POST http://localhost:8000/chat \
   -d '{"message": "Summarize business risks"}'
 ```
 
+### Chat with Request ID (for tracing)
+
+```bash
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -H "X-Request-ID: my-trace-123" \
+  -d '{"message": "What is total revenue?"}'
+# Response includes X-Request-ID: my-trace-123
+```
+
 ## Agent Tool-Calling Flow
 
 1. **User** sends a message to `POST /chat`.
@@ -127,6 +147,7 @@ curl -X POST http://localhost:8000/chat \
 4. **Tools** execute:
    - `run_sql_query`: Validates (read-only), executes SQL, returns JSON.
    - `predict_churn`: Loads model, extracts features, returns probability + risk level.
+   - `get_business_summary`: Returns predefined KPIs (customer count, total revenue, churn rate, revenue by region) for business overviews.
 5. **Agent** sends tool results back to the LLM.
 6. **LLM** generates a natural language response with insights.
 7. **Response** includes structured metadata: `insight_summary`, `confidence_level`, `data_sources_used`.
@@ -157,6 +178,20 @@ Example response for *"Predict churn risk for customer 10"*:
     "insight_summary": "Low churn risk; no immediate retention action needed.",
     "confidence_level": "high",
     "data_sources_used": ["ml_model"]
+  }
+}
+```
+
+Example response for *"Summarize business risks"* (uses `get_business_summary`):
+
+```json
+{
+  "response": "Based on the business summary, your customer base has X customers with a churn rate of Y%. Total revenue is $Z. East and North regions lead in revenue. Consider retention efforts in high-churn segments.",
+  "tool_calls": ["get_business_summary"],
+  "metadata": {
+    "insight_summary": "High-level KPI overview with regional breakdown.",
+    "confidence_level": "high",
+    "data_sources_used": ["business_summary"]
   }
 }
 ```

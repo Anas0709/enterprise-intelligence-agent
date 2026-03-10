@@ -12,7 +12,13 @@ sys.path.insert(0, str(PROJECT_ROOT))
 os.environ.setdefault("DATABASE_URL", "sqlite:///./data/test_enterprise.db")
 
 import pytest
-from app.database import validate_sql_query, run_sql_query, load_sample_data, get_engine
+from app.database import (
+    get_business_summary,
+    get_engine,
+    load_sample_data,
+    run_sql_query,
+    validate_sql_query,
+)
 
 
 @pytest.fixture(scope="module")
@@ -93,3 +99,39 @@ class TestRunSqlQuery:
         assert "results" in result
         if result["results"]:
             assert result["results"][0]["customer_id"] == 1
+
+
+class TestGetBusinessSummary:
+    """Tests for get_business_summary database function."""
+
+    def test_returns_expected_keys(self, db_with_data):
+        """Result must contain customer_count, total_revenue, churn_rate, revenue_by_region."""
+        result = get_business_summary()
+        assert "customer_count" in result
+        assert "total_revenue" in result
+        assert "churn_rate" in result
+        assert "revenue_by_region" in result
+
+    def test_revenue_by_region_structure(self, db_with_data):
+        """revenue_by_region must be a list of objects with region and revenue."""
+        result = get_business_summary()
+        revenue_by_region = result["revenue_by_region"]
+        assert isinstance(revenue_by_region, list)
+        for item in revenue_by_region:
+            assert isinstance(item, dict)
+            assert "region" in item
+            assert "revenue" in item
+
+    def test_revenue_by_region_ordered_descending(self, db_with_data):
+        """revenue_by_region must be ordered by revenue descending."""
+        result = get_business_summary()
+        revenue_by_region = result["revenue_by_region"]
+        revenues = [r["revenue"] for r in revenue_by_region]
+        assert revenues == sorted(revenues, reverse=True)
+
+    def test_kpis_have_sensible_types(self, db_with_data):
+        """customer_count is int, total_revenue and churn_rate are numeric."""
+        result = get_business_summary()
+        assert isinstance(result["customer_count"], int)
+        assert isinstance(result["total_revenue"], (int, float))
+        assert isinstance(result["churn_rate"], (int, float))

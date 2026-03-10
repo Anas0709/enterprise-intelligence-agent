@@ -28,7 +28,7 @@ def get_engine() -> Engine:
     if _engine is None:
         settings = get_settings()
         db_url = settings.database_url
-        # Ensure SQLite directory exists
+        # SQLite requires the parent directory to exist; create it to avoid startup failures
         if db_url.startswith("sqlite"):
             path = db_url.replace("sqlite:///", "")
             Path(path).parent.mkdir(parents=True, exist_ok=True)
@@ -47,7 +47,7 @@ def validate_sql_query(query: str) -> tuple[bool, str]:
         return False, "Only SELECT queries are allowed."
 
     for keyword in BLOCKED_KEYWORDS:
-        # Check for keyword as whole word
+        # Pad with spaces so we match whole words (e.g. block DROP but not "droplet")
         if f" {keyword.upper()} " in f" {query_upper} ":
             return False, f"Blocked keyword: {keyword.upper()}"
 
@@ -73,7 +73,7 @@ def run_sql_query(query: str, params: Optional[dict[str, Any]] = None) -> dict[s
             columns = list(result.keys())
 
         data = [dict(zip(columns, row)) for row in rows]
-        # Convert non-JSON-serializable types
+        # datetime/numpy types are not JSON-serializable; convert before returning
         for row in data:
             for k, v in row.items():
                 if hasattr(v, "isoformat"):
@@ -88,6 +88,62 @@ def run_sql_query(query: str, params: Optional[dict[str, Any]] = None) -> dict[s
         return {"error": str(e), "results": []}
 
 
+def get_business_summary() -> dict[str, Any]:
+    """
+    Fetch predefined KPIs from the customers table for high-level business overviews.
+    Returns customer_count, total_revenue, churn_rate, and revenue_by_region.
+    Uses fixed read-only SQL; no user input is interpolated.
+    """
+    try:
+        engine = get_engine()
+        with engine.connect() as conn:
+            count_result = conn.execute(
+                text(
+                    "SELECT COUNT(*) as customer_count, COALESCE(SUM(total_spend), 0) as total_revenue "
+                    "FROM customers"
+                )
+            )
+            count_row = count_result.fetchone()
+            customer_count = count_row[0] if count_row else 0
+            total_revenue = float(count_row[1]) if count_row and count_row[1] is not None else 0.0
+
+            # NULLIF avoids division by zero when table is empty
+            churn_result = conn.execute(
+                text(
+                    "SELECT CAST(SUM(churn) AS FLOAT) / NULLIF(COUNT(*), 0) as churn_rate FROM customers"
+                )
+            )
+            churn_row = churn_result.fetchone()
+            churn_rate = float(churn_row[0]) if churn_row and churn_row[0] is not None else 0.0
+
+            region_result = conn.execute(
+                text(
+                    "SELECT region, COALESCE(SUM(total_spend), 0) as revenue "
+                    "FROM customers GROUP BY region ORDER BY revenue DESC"
+                )
+            )
+            revenue_by_region = [
+                {"region": row[0], "revenue": float(row[1]) if row[1] is not None else 0.0}
+                for row in region_result.fetchall()
+            ]
+
+            return {
+                "customer_count": customer_count,
+                "total_revenue": round(total_revenue, 2),
+                "churn_rate": round(churn_rate, 4),
+                "revenue_by_region": revenue_by_region,
+            }
+    except Exception as e:
+        logger.exception("get_business_summary failed: %s", e)
+        return {
+            "error": str(e),
+            "customer_count": 0,
+            "total_revenue": 0.0,
+            "churn_rate": 0.0,
+            "revenue_by_region": [],
+        }
+
+
 def load_sample_data(csv_path: str, table_name: str = "customers") -> None:
     """
     Load sample CSV into SQLite database.
@@ -100,8 +156,6 @@ def load_sample_data(csv_path: str, table_name: str = "customers") -> None:
 
     df = pd.read_csv(path)
     engine = get_engine()
-
-    # Infer SQLite types
     df.to_sql(
         table_name,
         engine,
