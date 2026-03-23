@@ -1,4 +1,5 @@
 import os
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -46,4 +47,14 @@ def test_message_length_limit_allows_max_size():
     """The limit is inclusive at the configured maximum length."""
     r = client.post("/chat", json={"message": "x" * 4096})
     assert r.status_code == 200
+
+
+def test_chat_500_does_not_leak_internal_errors():
+    """500 responses must return a generic message, not internal exception details."""
+    with patch("app.main.process_message", side_effect=RuntimeError("internal secret")):
+        r = client.post("/chat", json={"message": "trigger error"})
+    assert r.status_code == 500
+    data = r.json()
+    assert "internal secret" not in data.get("detail", "")
+    assert "An unexpected error occurred" in data.get("detail", "")
 

@@ -136,5 +136,9 @@ async def chat(request: ChatRequest):
             metadata=result.get("metadata", {}),
         )
     except Exception as e:
-        logger.exception("Chat error")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Chat error: %s", e)
+        # Do not expose internal error details to clients; log above, return generic message
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred. Please try again later.",
+        )
