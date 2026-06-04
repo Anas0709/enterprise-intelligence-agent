@@ -1,0 +1,55 @@
+name: Weekly Maintenance
+
+on:
+  schedule:
+    # Mondays at 14:00 UTC
+    - cron: "0 14 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  maintain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Train model (required for readiness checks)
+        run: python train_model.py
+
+      - name: Run weekly maintenance
+        run: python scripts/weekly_maintain.py
+
+      - name: Commit and push maintenance log
+        env:
+          MAINTAINER_PAT: ${{ secrets.MAINTAINER_PAT }}
+        run: |
+          git config user.name "Anas Ahmad"
+          git config user.email "anasahmad0709@gmail.com"
+          git add .github/maintenance-log.md
+          if git diff --staged --quiet; then
+            echo "No maintenance log changes to commit."
+            exit 0
+          fi
+          git commit -m "$(cat <<'EOF'
+chore: weekly maintenance — verify test suite
+
+Append automated test verification entry to the maintenance log.
+EOF
+)"
+          if [ -n "$MAINTAINER_PAT" ]; then
+            git push "https://x-access-token:${MAINTAINER_PAT}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
+          else
+            git push
+          fi
