@@ -22,6 +22,18 @@ BLOCKED_KEYWORDS = {
 _engine: Optional[Engine] = None
 
 
+def check_db_connection() -> bool:
+    """Return True if the database accepts a simple read query (used by /ready)."""
+    try:
+        engine = get_engine()
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        logger.exception("Database health check failed")
+        return False
+
+
 def get_engine() -> Engine:
     """Get or create SQLAlchemy engine."""
     global _engine

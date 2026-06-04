@@ -1,7 +1,10 @@
 import os
+from pathlib import Path
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
+
+from app.config import get_settings
 
 
 # Ensure API tests use a dedicated DB file and that the SQLAlchemy engine
@@ -16,6 +19,39 @@ from app.main import app  # noqa: E402
 
 
 client = TestClient(app)
+
+
+def test_health_returns_ok():
+    """Liveness endpoint should always respond when the process is running."""
+    r = client.get("/health")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "ok"
+    assert "mock_llm" in data
+    assert "has_openai_key" in data
+
+
+def test_ready_returns_200_when_dependencies_available():
+    """Readiness should pass once sample data and the trained model are present."""
+    model_path = Path(get_settings().model_path)
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+    if not model_path.is_file():
+        model_path.write_bytes(b"\x80")
+
+    r = client.get("/ready")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "ready"
+    assert data["checks"]["database"] == "ok"
+    assert data["checks"]["model"] == "ok"
+
+
+def test_ready_returns_503_when_database_unavailable(monkeypatch):
+    """Load balancers rely on 503 to stop routing traffic to unhealthy instances."""
+    monkeypatch.setattr("app.main.check_db_connection", lambda: False)
+    r = client.get("/ready")
+    assert r.status_code == 503
+    assert r.json()["status"] == "not_ready"
 
 
 def test_x_request_id_is_propagated():

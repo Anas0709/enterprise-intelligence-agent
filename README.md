@@ -105,6 +105,14 @@ Chat messages are limited to 4,096 characters. Overlong messages are rejected wi
 curl http://localhost:8000/health
 ```
 
+### Readiness Check
+
+```bash
+curl http://localhost:8000/ready
+```
+
+Returns `200` when the database and ML model file are available; `503` otherwise (for load balancers and orchestrators).
+
 ### Chat - Revenue by Region
 
 ```bash
@@ -254,6 +262,14 @@ docker-compose up --build
 - **ML**: Single model (churn); feature encoding is coupled to training script.
 - **LLM**: OpenAI only (extensible but not abstracted).
 - **Future**: Embeddings + vector search, Streamlit UI, LLM provider abstraction.
+
+## Weekly Maintenance (Optional)
+
+A scheduled GitHub Action (`.github/workflows/weekly-maintenance.yml`) runs every Monday: it executes the test suite and appends a verification entry to `.github/maintenance-log.md`.
+
+**To count commits on your GitHub contribution graph**, add a repo secret named `MAINTAINER_PAT` (fine-grained PAT with **Contents: Read and write** on this repo). Without it, pushes still work via `GITHUB_TOKEN`, but they appear as `github-actions[bot]` and usually do not show on your personal graph.
+
+You can also trigger the workflow manually from the **Actions** tab (`workflow_dispatch`).
 
 ## Contributing
 

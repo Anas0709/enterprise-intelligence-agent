@@ -6,13 +6,13 @@ import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app.agent import process_message
 from app.config import get_settings
-from app.database import load_sample_data
+from app.database import check_db_connection, load_sample_data
 
 logging.basicConfig(
     level=logging.INFO,
@@ -122,6 +122,32 @@ async def health():
         "status": "ok",
         "mock_llm": settings.should_use_mock_llm,
         "has_openai_key": settings.has_openai_key,
+    }
+
+
+@app.get("/ready")
+async def ready(response: Response):
+    """
+    Readiness check for load balancers and orchestrators.
+    Returns 503 when required dependencies (database, ML model file) are unavailable.
+    """
+    settings = get_settings()
+    model_path = Path(settings.model_path)
+    db_ok = check_db_connection()
+    model_ok = model_path.is_file()
+
+    checks = {
+        "database": "ok" if db_ok else "unavailable",
+        "model": "ok" if model_ok else "missing",
+    }
+    ready_status = db_ok and model_ok
+
+    if not ready_status:
+        response.status_code = 503
+
+    return {
+        "status": "ready" if ready_status else "not_ready",
+        "checks": checks,
     }
 
 
