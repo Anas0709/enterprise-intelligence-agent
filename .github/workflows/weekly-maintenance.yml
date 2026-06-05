@@ -42,12 +42,8 @@ jobs:
             echo "No maintenance log changes to commit."
             exit 0
           fi
-          git commit -m "$(cat <<'EOF'
-chore: weekly maintenance — verify test suite
-
-Append automated test verification entry to the maintenance log.
-EOF
-)"
+          git commit -m "chore: weekly maintenance — verify test suite" \
+            -m "Append automated test verification entry to the maintenance log."
           if [ -n "$MAINTAINER_PAT" ]; then
             git push "https://x-access-token:${MAINTAINER_PAT}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
           else
